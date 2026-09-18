@@ -38,6 +38,10 @@ class _CameraPageState extends State<CameraPage> {
   // Jumlah wajah yang terdeteksi pada frame terakhir.
   int _faceCount = 0;
 
+  double? _headEulerAngleX;
+  double? _headEulerAngleY;
+  double? _headEulerAngleZ;
+
   // File CSV untuk menyimpan data eksperimen.
 File? _csvFile;
 
@@ -54,7 +58,7 @@ Future<void> _initializeCsv() async {
   // Jika file belum ada, buat header CSV.
   if (!await file.exists()) {
     await file.writeAsString(
-      'frame,timestamp,face_count,left_eye_probability,right_eye_probability\n',
+      'frame,timestamp,face_count,left_eye_probability,right_eye_probability,head_euler_angle_x,head_euler_angle_y,head_euler_angle_z\n',
     );
   }
 
@@ -67,6 +71,9 @@ Future<void> _saveFrameToCsv({
   required int faceCount,
   required double? leftEye,
   required double? rightEye,
+  required double? headX,
+  required double? headY,
+  required double? headZ,
 }) async {
   if (_csvFile == null) {
     return;
@@ -80,6 +87,9 @@ Future<void> _saveFrameToCsv({
     faceCount,
     leftEye ?? '',
     rightEye ?? '',
+    headX ?? '',
+    headY ?? '',
+    headZ ?? '',
   ];
 
   await _csvFile!.writeAsString(
@@ -253,6 +263,10 @@ Future<void> _saveFrameToCsv({
 
       final rightEye =
           face.rightEyeOpenProbability;
+      
+      final headX = face.headEulerAngleX;
+      final headY = face.headEulerAngleY;
+      final headZ = face.headEulerAngleZ;
 
       // --------------------------------------------------------
       // G. Tampilkan hasil ke UI
@@ -266,6 +280,12 @@ Future<void> _saveFrameToCsv({
     _leftEyeProbability = leftEye;
 
     _rightEyeProbability = rightEye;
+
+    _headEulerAngleX = headX;
+    
+    _headEulerAngleY = headY;
+    
+    _headEulerAngleZ = headZ;
   });
 }
 
@@ -274,6 +294,9 @@ await _saveFrameToCsv(
   faceCount: faces.length,
   leftEye: leftEye,
   rightEye: rightEye,
+  headX: headX,
+  headY: headY,
+  headZ: headZ,
 );
 
       // --------------------------------------------------------
@@ -281,11 +304,14 @@ await _saveFrameToCsv(
       // --------------------------------------------------------
 
       debugPrint(
-        'Frame $_frameNumber | '
-        'Faces: ${faces.length} | '
-        'Left: ${leftEye?.toStringAsFixed(3) ?? "null"} | '
-        'Right: ${rightEye?.toStringAsFixed(3) ?? "null"}',
-      );
+      'Frame $_frameNumber | '
+      'Faces: ${faces.length} | '
+      'Left: ${leftEye?.toStringAsFixed(3) ?? "null"} | '
+      'Right: ${rightEye?.toStringAsFixed(3) ?? "null"} | '
+      'HeadX: ${headX?.toStringAsFixed(2) ?? "null"} | '
+      'HeadY: ${headY?.toStringAsFixed(2) ?? "null"} | '
+      'HeadZ: ${headZ?.toStringAsFixed(2) ?? "null"}',
+);
     } catch (e) {
       debugPrint(
         'Error saat memproses frame: $e',
@@ -460,6 +486,36 @@ await _saveFrameToCsv(
                   '${_rightEyeProbability?.toStringAsFixed(3) ?? "-"}',
                   style: const TextStyle(
                     fontSize: 18,
+                  ),
+                ),
+
+                const SizedBox(height: 4),
+
+                Text(
+                  'Head X: '
+                  '${_headEulerAngleX?.toStringAsFixed(2) ?? "-"}°',
+                  style: const TextStyle(
+                    fontSize: 16,
+                  ),
+                ),
+
+                const SizedBox(height: 4),
+
+                Text(
+                  'Head Y: '
+                  '${_headEulerAngleY?.toStringAsFixed(2) ?? "-"}°',
+                  style: const TextStyle(
+                    fontSize: 16,
+                  ),
+                ),
+
+                const SizedBox(height: 4),
+
+                Text(
+                  'Head Z: '
+                  '${_headEulerAngleZ?.toStringAsFixed(2) ?? "-"}°',
+                  style: const TextStyle(
+                    fontSize: 16,
                   ),
                 ),
 

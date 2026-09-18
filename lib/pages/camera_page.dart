@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+import 'package:csv/csv.dart';
+import 'package:path_provider/path_provider.dart';
 
 class CameraPage extends StatefulWidget {
   const CameraPage({super.key});
@@ -36,6 +38,55 @@ class _CameraPageState extends State<CameraPage> {
   // Jumlah wajah yang terdeteksi pada frame terakhir.
   int _faceCount = 0;
 
+  // File CSV untuk menyimpan data eksperimen.
+File? _csvFile;
+
+// Membuat file CSV.
+Future<void> _initializeCsv() async {
+  final directory = await getApplicationDocumentsDirectory();
+
+  final file = File(
+    '${directory.path}/eye_probability_data.csv',
+  );
+
+  _csvFile = file;
+
+  // Jika file belum ada, buat header CSV.
+  if (!await file.exists()) {
+    await file.writeAsString(
+      'frame,timestamp,face_count,left_eye_probability,right_eye_probability\n',
+    );
+  }
+
+  debugPrint('CSV tersimpan di: ${file.path}');
+}
+
+// Menyimpan data setiap frame ke CSV.
+Future<void> _saveFrameToCsv({
+  required int frame,
+  required int faceCount,
+  required double? leftEye,
+  required double? rightEye,
+}) async {
+  if (_csvFile == null) {
+    return;
+  }
+
+  final timestamp = DateTime.now().toIso8601String();
+
+  final row = [
+    frame,
+    timestamp,
+    faceCount,
+    leftEye ?? '',
+    rightEye ?? '',
+  ];
+
+  await _csvFile!.writeAsString(
+    '${const ListToCsvConverter().convert([row])}\n',
+    mode: FileMode.append,
+  );
+}
   // ============================================================
   // 3. FACE DETECTOR ML KIT
   // ============================================================
@@ -70,6 +121,7 @@ class _CameraPageState extends State<CameraPage> {
   void initState() {
     super.initState();
 
+     _initializeCsv();
     _initializeCamera();
   }
 
@@ -206,15 +258,23 @@ class _CameraPageState extends State<CameraPage> {
       // G. Tampilkan hasil ke UI
       // --------------------------------------------------------
 
+      
       if (mounted) {
-        setState(() {
-          _faceCount = faces.length;
+  setState(() {
+    _faceCount = faces.length;
 
-          _leftEyeProbability = leftEye;
+    _leftEyeProbability = leftEye;
 
-          _rightEyeProbability = rightEye;
-        });
-      }
+    _rightEyeProbability = rightEye;
+  });
+}
+
+await _saveFrameToCsv(
+  frame: _frameNumber,
+  faceCount: faces.length,
+  leftEye: leftEye,
+  rightEye: rightEye,
+);
 
       // --------------------------------------------------------
       // H. Debug console

@@ -27,6 +27,7 @@ class _CameraPageState extends State<CameraPage> {
 
   // Nomor frame yang berhasil diproses.
   int _frameNumber = 0;
+  String _sessionId = '';
 
   // ============================================================
   // 2. HASIL DETEKSI MATA
@@ -50,7 +51,7 @@ Future<void> _initializeCsv() async {
   final directory = await getApplicationDocumentsDirectory();
 
   final file = File(
-    '${directory.path}/eye_probability_data.csv',
+     '${directory.path}/face_liveness_data.csv',
   );
 
   _csvFile = file;
@@ -58,7 +59,7 @@ Future<void> _initializeCsv() async {
   // Jika file belum ada, buat header CSV.
   if (!await file.exists()) {
     await file.writeAsString(
-      'frame,timestamp,face_count,left_eye_probability,right_eye_probability,head_euler_angle_x,head_euler_angle_y,head_euler_angle_z\n',
+       'session_id,frame,timestamp,face_count,left_eye_probability,right_eye_probability,head_euler_angle_x,head_euler_angle_y,head_euler_angle_z\n',
     );
   }
 
@@ -67,6 +68,7 @@ Future<void> _initializeCsv() async {
 
 // Menyimpan data setiap frame ke CSV.
 Future<void> _saveFrameToCsv({
+  required String sessionId,
   required int frame,
   required int faceCount,
   required double? leftEye,
@@ -82,6 +84,7 @@ Future<void> _saveFrameToCsv({
   final timestamp = DateTime.now().toIso8601String();
 
   final row = [
+    sessionId,
     frame,
     timestamp,
     faceCount,
@@ -131,7 +134,9 @@ Future<void> _saveFrameToCsv({
   void initState() {
     super.initState();
 
-     _initializeCsv();
+    _sessionId = DateTime.now().toIso8601String();
+
+    _initializeCsv();
     _initializeCamera();
   }
 
@@ -290,6 +295,7 @@ Future<void> _saveFrameToCsv({
 }
 
 await _saveFrameToCsv(
+  sessionId: _sessionId,
   frame: _frameNumber,
   faceCount: faces.length,
   leftEye: leftEye,
@@ -304,6 +310,7 @@ await _saveFrameToCsv(
       // --------------------------------------------------------
 
       debugPrint(
+      'Session: $_sessionId | '
       'Frame $_frameNumber | '
       'Faces: ${faces.length} | '
       'Left: ${leftEye?.toStringAsFixed(3) ?? "null"} | '

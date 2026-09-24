@@ -24,6 +24,7 @@ class _CameraPageState extends State<CameraPage> {
 
   // Mencegah beberapa frame diproses bersamaan.
   bool _isProcessing = false;
+  DateTime? _lastProcessedTime;
 
   // Nomor frame yang berhasil diproses.
   int _frameNumber = 0;
@@ -70,6 +71,7 @@ Future<void> _initializeCsv() async {
 Future<void> _saveFrameToCsv({
   required String sessionId,
   required int frame,
+  required String timestamp,
   required int faceCount,
   required double? leftEye,
   required double? rightEye,
@@ -80,8 +82,6 @@ Future<void> _saveFrameToCsv({
   if (_csvFile == null) {
     return;
   }
-
-  final timestamp = DateTime.now().toIso8601String();
 
   final row = [
     sessionId,
@@ -135,6 +135,7 @@ Future<void> _saveFrameToCsv({
     super.initState();
 
     _sessionId = DateTime.now().toIso8601String();
+    _lastProcessedTime = null;
 
     _initializeCsv();
     _initializeCamera();
@@ -162,7 +163,7 @@ Future<void> _saveFrameToCsv({
         frontCamera,
 
         // Resolusi medium cukup untuk eksperimen awal.
-        ResolutionPreset.medium,
+        ResolutionPreset.low,
 
         // Kita tidak membutuhkan audio.
         enableAudio: false,
@@ -201,15 +202,28 @@ Future<void> _saveFrameToCsv({
   // ============================================================
 
   Future<void> _processCameraImage(
-    CameraImage image,
-  ) async {
-    // Jika frame sebelumnya masih diproses,
-    // frame baru dilewati.
-    if (_isProcessing) {
-      return;
-    }
+  CameraImage image,
+) async {
+  // Membatasi pengambilan sampel menjadi maksimal
+  // sekitar 10 sampel per detik.
+  final now = DateTime.now();
 
-    _isProcessing = true;
+  if (_lastProcessedTime != null &&
+      now.difference(_lastProcessedTime!) <
+          const Duration(milliseconds: 100)) {
+    return;
+  }
+
+  // Jika frame sebelumnya masih diproses,
+  // frame baru dilewati.
+  if (_isProcessing) {
+    return;
+  }
+
+  // Catat waktu saat frame diterima untuk diproses.
+  _lastProcessedTime = now;
+
+  _isProcessing = true;
 
     try {
       // --------------------------------------------------------
@@ -297,6 +311,7 @@ Future<void> _saveFrameToCsv({
 await _saveFrameToCsv(
   sessionId: _sessionId,
   frame: _frameNumber,
+  timestamp: now.toIso8601String(),
   faceCount: faces.length,
   leftEye: leftEye,
   rightEye: rightEye,

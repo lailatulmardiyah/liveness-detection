@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
@@ -14,7 +15,141 @@ class CameraPage extends StatefulWidget {
 }
 
 class _CameraPageState extends State<CameraPage> {
-  // ============================================================
+  Map<String, double> _calculateTextureFeatures(
+  CameraImage image,
+  Face face,
+) {
+  final plane = image.planes[0];
+
+  final bytes = plane.bytes;
+  final bytesPerRow = plane.bytesPerRow;
+
+  final imageWidth = image.width;
+  final imageHeight = image.height;
+
+  int left = face.boundingBox.left.floor();
+  int top = face.boundingBox.top.floor();
+  int right = face.boundingBox.right.ceil();
+  int bottom = face.boundingBox.bottom.ceil();
+
+  // Batasi bounding box agar tidak keluar dari gambar.
+  left = left.clamp(1, imageWidth - 2);
+  top = top.clamp(1, imageHeight - 2);
+  right = right.clamp(left + 1, imageWidth - 1);
+  bottom = bottom.clamp(top + 1, imageHeight - 1);
+
+  double sum = 0;
+  double sumSquared = 0;
+  int count = 0;
+
+  double laplacianSum = 0;
+  double laplacianSquaredSum = 0;
+  int laplacianCount = 0;
+
+  int edgeCount = 0;
+
+  // Sampling agar perhitungan tidak terlalu berat.
+  const step = 2;
+
+  for (int y = top; y < bottom; y += step) {
+    for (int x = left; x < right; x += step) {
+      final index = y * bytesPerRow + x;
+
+      if (index < 0 || index >= bytes.length) {
+        continue;
+      }
+
+      final center = bytes[index].toDouble();
+
+      sum += center;
+      sumSquared += center * center;
+      count++;
+
+      // Pastikan tetangga tersedia.
+      if (x > left &&
+          x < right - 1 &&
+          y > top &&
+          y < bottom - 1) {
+
+        final leftPixel =
+            bytes[y * bytesPerRow + (x - 1)].toDouble();
+
+        final rightPixel =
+            bytes[y * bytesPerRow + (x + 1)].toDouble();
+
+        final topPixel =
+            bytes[(y - 1) * bytesPerRow + x].toDouble();
+
+        final bottomPixel =
+            bytes[(y + 1) * bytesPerRow + x].toDouble();
+
+        // Laplacian 3x3 sederhana:
+        // L = kiri + kanan + atas + bawah - 4 * tengah
+        final laplacian =
+            leftPixel +
+            rightPixel +
+            topPixel +
+            bottomPixel -
+            (4 * center);
+
+        laplacianSum += laplacian;
+        laplacianSquaredSum += laplacian * laplacian;
+        laplacianCount++;
+
+        // Gradient sederhana untuk edge density.
+        final gradientX = (rightPixel - leftPixel).abs();
+        final gradientY = (bottomPixel - topPixel).abs();
+
+        final gradient = gradientX + gradientY;
+
+        if (gradient > 40) {
+          edgeCount++;
+        }
+      }
+    }
+  }
+
+  if (count == 0 || laplacianCount == 0) {
+    return {
+      'laplacian_variance': 0,
+      'edge_density': 0,
+      'intensity_mean': 0,
+      'intensity_std': 0,
+    };
+  }
+
+  final intensityMean = sum / count;
+
+  final intensityVariance =
+      (sumSquared / count) -
+      (intensityMean * intensityMean);
+
+  final laplacianMean =
+      laplacianSum / laplacianCount;
+
+  final laplacianVariance =
+      (laplacianSquaredSum / laplacianCount) -
+      (laplacianMean * laplacianMean);
+
+  final edgeDensity =
+      edgeCount / laplacianCount;
+
+  return {
+    'laplacian_variance':
+        laplacianVariance < 0 ? 0 : laplacianVariance,
+
+    'edge_density': edgeDensity,
+
+    'intensity_mean': intensityMean,
+
+    'intensity_std':
+        intensityVariance <= 0
+            ? 0
+            : sqrt(intensityVariance),
+  };
+}
+
+    // ============================================================
   // 1. CAMERA
   // ============================================================
 
@@ -52,16 +187,16 @@ Future<void> _initializeCsv() async {
   final directory = await getApplicationDocumentsDirectory();
 
   final file = File(
-     '${directory.path}/face_liveness_data.csv',
+     '${directory.path}/face_liveness_texture_data.csv',
   );
 
   _csvFile = file;
 
   // Jika file belum ada, buat header CSV.
   if (!await file.exists()) {
-    await file.writeAsString(
-       'session_id,frame,timestamp,face_count,left_eye_probability,right_eye_probability,head_euler_angle_x,head_euler_angle_y,head_euler_angle_z\n',
-    );
+  await file.writeAsString(
+    'session_id,frame,timestamp,face_count,left_eye_probability,right_eye_probability,head_euler_angle_x,head_euler_angle_y,head_euler_angle_z,laplacian_variance,edge_density,intensity_mean,intensity_std\n',
+  );
   }
 
   debugPrint('CSV tersimpan di: ${file.path}');
@@ -78,6 +213,10 @@ Future<void> _saveFrameToCsv({
   required double? headX,
   required double? headY,
   required double? headZ,
+  required double laplacianVariance,
+  required double edgeDensity,
+  required double intensityMean,
+  required double intensityStd,
 }) async {
   if (_csvFile == null) {
     return;
@@ -93,6 +232,10 @@ Future<void> _saveFrameToCsv({
     headX ?? '',
     headY ?? '',
     headZ ?? '',
+    laplacianVariance,
+    edgeDensity,
+    intensityMean,
+    intensityStd,
   ];
 
   await _csvFile!.writeAsString(
@@ -267,6 +410,11 @@ Future<void> _saveFrameToCsv({
 
       final face = faces.first;
 
+      final textureFeatures = _calculateTextureFeatures(
+        image,
+        face,
+      );
+
       // --------------------------------------------------------
       // E. Tambahkan nomor frame
       // --------------------------------------------------------
@@ -318,6 +466,14 @@ await _saveFrameToCsv(
   headX: headX,
   headY: headY,
   headZ: headZ,
+  laplacianVariance:
+      textureFeatures['laplacian_variance'] ?? 0,
+  edgeDensity:
+      textureFeatures['edge_density'] ?? 0,
+  intensityMean:
+      textureFeatures['intensity_mean'] ?? 0,
+  intensityStd:
+      textureFeatures['intensity_std'] ?? 0,
 );
 
       // --------------------------------------------------------
@@ -325,14 +481,22 @@ await _saveFrameToCsv(
       // --------------------------------------------------------
 
       debugPrint(
-      'Session: $_sessionId | '
-      'Frame $_frameNumber | '
-      'Faces: ${faces.length} | '
-      'Left: ${leftEye?.toStringAsFixed(3) ?? "null"} | '
-      'Right: ${rightEye?.toStringAsFixed(3) ?? "null"} | '
-      'HeadX: ${headX?.toStringAsFixed(2) ?? "null"} | '
-      'HeadY: ${headY?.toStringAsFixed(2) ?? "null"} | '
-      'HeadZ: ${headZ?.toStringAsFixed(2) ?? "null"}',
+  'Session: $_sessionId | '
+  'Frame $_frameNumber | '
+  'Faces: ${faces.length} | '
+  'Left: ${leftEye?.toStringAsFixed(3) ?? "null"} | '
+  'Right: ${rightEye?.toStringAsFixed(3) ?? "null"} | '
+  'HeadX: ${headX?.toStringAsFixed(2) ?? "null"} | '
+  'HeadY: ${headY?.toStringAsFixed(2) ?? "null"} | '
+  'HeadZ: ${headZ?.toStringAsFixed(2) ?? "null"} | '
+  'Laplacian: '
+  '${textureFeatures['laplacian_variance']?.toStringAsFixed(2) ?? "0"} | '
+  'Edge: '
+  '${textureFeatures['edge_density']?.toStringAsFixed(4) ?? "0"} | '
+  'Intensity Mean: '
+  '${textureFeatures['intensity_mean']?.toStringAsFixed(2) ?? "0"} | '
+  'Intensity Std: '
+  '${textureFeatures['intensity_std']?.toStringAsFixed(2) ?? "0"}',
 );
     } catch (e) {
       debugPrint(

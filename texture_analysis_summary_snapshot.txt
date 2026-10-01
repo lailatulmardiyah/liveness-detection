@@ -1,0 +1,44 @@
+=== TEXTURE ANALYSIS SNAPSHOT ===
+
+Dataset: face_liveness_texture_data_2026-09-29.csv
+20 session utama: 10 REAL + 10 REPLAY
+Raw labeled frames: 3241
+Clean frames: 3224
+Removed all-zero frames: 17
+REAL clean: 1766
+REPLAY clean: 1458
+
+4 FITUR:
+Laplacian Variance: REAL mean 772.3568; REPLAY mean 65.7715; threshold 163; Recall REAL 93.94%
+Edge Density: REAL mean 0.1203; REPLAY mean 0.0539; threshold 0.07; Recall REAL 78.77%
+Intensity Mean: REAL mean 103.8565; REPLAY mean 121.2859; threshold 123; Recall REAL 74.58%
+Intensity Std: REAL mean 60.4875; REPLAY mean 58.3527; threshold 63; Recall REAL 54.08%
+
+LOSO:
+- 20 folds
+- Semua fold memilih threshold 163
+- REAL correct 1667/1766
+- REPLAY correct 1392/1458
+- Frame Accuracy 94.82%
+- Balanced Accuracy 94.93%
+- Session majority vote 20/20 benar
+
+SENSITIVITY threshold 130..200:
+- Threshold 163
+- Frame Accuracy 94.63%
+- Recall REAL 93.94%
+- Recall REPLAY 95.47%
+- Balanced Accuracy 94.71%
+- Precision REAL 96.17%
+- F1 REAL 95.04%
+- TP 1659, FN 107, TN 1392, FP 66
+
+ERROR threshold 163:
+- FN 107/1766 = 6.06%
+- FP 66/1458 = 4.53%
+- FN Laplacian mean/min/max = 81.7764 / 4.9066 / 160.9431
+- FP Laplacian mean/min/max = 403.6843 / 167.8552 / 1752.7181
+
+Catatan:
+LOSO dan sensitivity all-clean-frame adalah dua protokol evaluasi berbeda. Jangan mencampurkan angkanya.
+Threshold 163 adalah hasil eksperimen pada dataset 20 session ini, bukan klaim universal.

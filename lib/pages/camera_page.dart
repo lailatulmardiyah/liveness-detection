@@ -179,6 +179,12 @@ class _CameraPageState extends State<CameraPage> {
   double? _headEulerAngleY;
   double? _headEulerAngleZ;
 
+  // Threshold texture hasil eksperimen
+static const double _laplacianThreshold = 163.0;
+
+// Hasil klasifikasi texture
+String _textureClassification = '-';
+
   // File CSV untuk menyimpan data eksperimen.
 File? _csvFile;
 
@@ -415,6 +421,14 @@ Future<void> _saveFrameToCsv({
         face,
       );
 
+      final laplacianVariance =
+    textureFeatures['laplacian_variance'] ?? 0;
+
+      final textureClassification =
+    laplacianVariance >= _laplacianThreshold
+        ? 'REAL'
+        : 'REPLAY';
+
       // --------------------------------------------------------
       // E. Tambahkan nomor frame
       // --------------------------------------------------------
@@ -453,6 +467,8 @@ Future<void> _saveFrameToCsv({
     _headEulerAngleY = headY;
     
     _headEulerAngleZ = headZ;
+
+    _textureClassification = textureClassification;
   });
 }
 
@@ -491,6 +507,7 @@ await _saveFrameToCsv(
   'HeadZ: ${headZ?.toStringAsFixed(2) ?? "null"} | '
   'Laplacian: '
   '${textureFeatures['laplacian_variance']?.toStringAsFixed(2) ?? "0"} | '
+  'Texture Classification: $textureClassification | '
   'Edge: '
   '${textureFeatures['edge_density']?.toStringAsFixed(4) ?? "0"} | '
   'Intensity Mean: '
@@ -704,7 +721,24 @@ await _saveFrameToCsv(
                     fontSize: 16,
                   ),
                 ),
+                
+                const SizedBox(height: 10),
 
+                Text(
+                  'Texture: $_textureClassification',
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                Text(
+                  'Threshold Laplacian: $_laplacianThreshold',
+                  style: const TextStyle(
+                  fontSize: 14,
+                 ),
+                ),
+                
                 const SizedBox(height: 10),
 
                 const Text(

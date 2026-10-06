@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:csv/csv.dart';
 import 'package:path_provider/path_provider.dart';
+import '../services/liveness_random_forest.dart';
 
 class CameraPage extends StatefulWidget {
   const CameraPage({super.key});
@@ -185,6 +186,11 @@ static const double _laplacianThreshold = 163.0;
 // Hasil klasifikasi texture
 String _textureClassification = '-';
 
+  // Hasil klasifikasi dari model Random Forest
+LivenessRandomForest? _livenessModel;
+String _modelClassification = '-';
+bool _isModelReady = false;
+
   // File CSV untuk menyimpan data eksperimen.
 File? _csvFile;
 
@@ -288,7 +294,25 @@ Future<void> _saveFrameToCsv({
 
     _initializeCsv();
     _initializeCamera();
+    _loadLivenessModel();
   }
+
+  Future<void> _loadLivenessModel() async {
+  try {
+    final model = await LivenessRandomForest.load();
+
+    if (!mounted) return;
+
+    setState(() {
+      _livenessModel = model;
+      _isModelReady = true;
+    });
+
+    debugPrint('Model Random Forest berhasil dimuat.');
+  } catch (e) {
+    debugPrint('Gagal memuat model Random Forest: $e');
+  }
+}
 
   Future<void> _initializeCamera() async {
     try {
@@ -421,6 +445,26 @@ Future<void> _saveFrameToCsv({
         face,
       );
 
+      
+      final model = _livenessModel;
+
+      String modelClassification = '-';
+
+      if (model != null) {
+        final prediction = model.predict(
+          laplacianVariance:
+              (textureFeatures['laplacian_variance'] ?? 0).toDouble(),
+          edgeDensity:
+              (textureFeatures['edge_density'] ?? 0).toDouble(),
+          intensityMean:
+              (textureFeatures['intensity_mean'] ?? 0).toDouble(),
+          intensityStd:
+              (textureFeatures['intensity_std'] ?? 0).toDouble(),
+        );
+
+        modelClassification = prediction['label'] as String;
+      }
+
       final laplacianVariance =
     textureFeatures['laplacian_variance'] ?? 0;
 
@@ -469,6 +513,8 @@ Future<void> _saveFrameToCsv({
     _headEulerAngleZ = headZ;
 
     _textureClassification = textureClassification;
+
+    _modelClassification = modelClassification;
   });
 }
 
@@ -737,6 +783,18 @@ await _saveFrameToCsv(
                   style: const TextStyle(
                   fontSize: 14,
                  ),
+                ),
+
+                
+                const SizedBox(height: 8),
+
+                Text(
+                  'Random Forest: '
+                  '${_isModelReady ? _modelClassification : "Memuat model..."}',
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 
                 const SizedBox(height: 10),

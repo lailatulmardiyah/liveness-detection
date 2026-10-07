@@ -207,7 +207,7 @@ Future<void> _initializeCsv() async {
   // Jika file belum ada, buat header CSV.
   if (!await file.exists()) {
   await file.writeAsString(
-    'session_id,frame,timestamp,face_count,left_eye_probability,right_eye_probability,head_euler_angle_x,head_euler_angle_y,head_euler_angle_z,laplacian_variance,edge_density,intensity_mean,intensity_std\n',
+    'session_id,frame,timestamp,face_count,left_eye_probability,right_eye_probability,head_euler_angle_x,head_euler_angle_y,head_euler_angle_z,laplacian_variance,edge_density,intensity_mean,intensity_std,model_classification,real_votes,replay_votes,confidence_vote_fraction,texture_classification\n',
   );
   }
 
@@ -229,6 +229,12 @@ Future<void> _saveFrameToCsv({
   required double edgeDensity,
   required double intensityMean,
   required double intensityStd,
+
+  required String modelClassification,
+  required int realVotes,
+  required int replayVotes,
+  required double confidenceVoteFraction,
+  required String textureClassification,
 }) async {
   if (_csvFile == null) {
     return;
@@ -248,7 +254,14 @@ Future<void> _saveFrameToCsv({
     edgeDensity,
     intensityMean,
     intensityStd,
+
+     modelClassification,
+    realVotes,
+    replayVotes,
+    confidenceVoteFraction,
+    textureClassification,
   ];
+  
 
   await _csvFile!.writeAsString(
     '${const ListToCsvConverter().convert([row])}\n',
@@ -448,22 +461,31 @@ Future<void> _saveFrameToCsv({
       
       final model = _livenessModel;
 
-      String modelClassification = '-';
+String modelClassification = '-';
+int realVotes = 0;
+int replayVotes = 0;
+double confidenceVoteFraction = 0.0;
 
-      if (model != null) {
-        final prediction = model.predict(
-          laplacianVariance:
-              (textureFeatures['laplacian_variance'] ?? 0).toDouble(),
-          edgeDensity:
-              (textureFeatures['edge_density'] ?? 0).toDouble(),
-          intensityMean:
-              (textureFeatures['intensity_mean'] ?? 0).toDouble(),
-          intensityStd:
-              (textureFeatures['intensity_std'] ?? 0).toDouble(),
-        );
+if (model != null) {
+  final prediction = model.predict(
+    laplacianVariance:
+        (textureFeatures['laplacian_variance'] ?? 0).toDouble(),
+    edgeDensity:
+        (textureFeatures['edge_density'] ?? 0).toDouble(),
+    intensityMean:
+        (textureFeatures['intensity_mean'] ?? 0).toDouble(),
+    intensityStd:
+        (textureFeatures['intensity_std'] ?? 0).toDouble(),
+  );
 
-        modelClassification = prediction['label'] as String;
-      }
+  modelClassification = prediction['label'] as String;
+
+  realVotes = prediction['real_votes'] as int;
+  replayVotes = prediction['replay_votes'] as int;
+
+  confidenceVoteFraction =
+      (prediction['confidence_vote_fraction'] as num).toDouble();
+}
 
       final laplacianVariance =
     textureFeatures['laplacian_variance'] ?? 0;
@@ -536,6 +558,12 @@ await _saveFrameToCsv(
       textureFeatures['intensity_mean'] ?? 0,
   intensityStd:
       textureFeatures['intensity_std'] ?? 0,
+
+  modelClassification: modelClassification,
+  realVotes: realVotes,
+  replayVotes: replayVotes,
+  confidenceVoteFraction: confidenceVoteFraction,
+  textureClassification: textureClassification,
 );
 
       // --------------------------------------------------------

@@ -1,0 +1,31 @@
+﻿=== TEXTURE ANALYSIS SUMMARY ===
+Dataset: face_liveness_texture_data_2026-09-29.csv
+Raw labeled frames: 3241
+Clean frames: 3224
+Removed all-zero frames: 17
+REAL clean: 1766
+REPLAY clean: 1458
+
+--- SENSITIVITY 130..200 ---
+Best threshold: 163
+Frame Accuracy: 94.63%
+Recall REAL: 93.94%
+Recall REPLAY: 95.47%
+Balanced Accuracy: 94.71%
+Precision REAL: 96.17%
+F1 REAL: 95.04%
+TP=1659, FN=107, TN=1392, FP=66
+
+--- LOSO ---
+Aggregated TP=1659, FN=107, TN=1392, FP=66
+Frame Accuracy: 94.63%
+Recall REAL: 93.94%
+Recall REPLAY: 95.47%
+Balanced Accuracy: 94.71%
+
+--- ERROR ANALYSIS THRESHOLD 163 ---
+FN: 107 / 1766 = 6.06%
+FP: 66 / 1458 = 4.53%
+
+CATATAN: LOSO dan sensitivity all-clean-frame adalah dua protokol berbeda.
+Threshold 163 adalah hasil eksperimen pada 20 session ini, bukan klaim universal.

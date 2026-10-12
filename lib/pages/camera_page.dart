@@ -1,3 +1,5 @@
+import '../liveness/liveness_analyzer.dart';
+import '../models/liveness_result.dart';
 import 'dart:io';
 import 'dart:math';
 
@@ -17,6 +19,9 @@ class CameraPage extends StatefulWidget {
 }
 
 class _CameraPageState extends State<CameraPage> {
+    final LivenessAnalyzer _livenessAnalyzer = LivenessAnalyzer();
+
+  LivenessResult _livenessResult = LivenessResult.initial();
   Map<String, double> _calculateTextureFeatures(CameraImage image, Face face) {
     final plane = image.planes[0];
 
@@ -418,7 +423,7 @@ class _CameraPageState extends State<CameraPage> {
       // --------------------------------------------------------
 
       final face = faces.first;
-
+final livenessResult = _livenessAnalyzer.processFace(face);
       final textureFeatures = _calculateTextureFeatures(image, face);
 
       final model = _livenessModel;
@@ -476,6 +481,8 @@ class _CameraPageState extends State<CameraPage> {
 
       if (mounted) {
         setState(() {
+          _livenessResult = livenessResult;
+
           _faceCount = faces.length;
 
           _leftEyeProbability = leftEye;
@@ -731,6 +738,44 @@ class _CameraPageState extends State<CameraPage> {
                 ),
 
                 const SizedBox(height: 10),
+
+const Text(
+  'HASIL LIVENESS DETECTION',
+  style: TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.bold,
+  ),
+),
+
+const SizedBox(height: 8),
+
+Text('Langkah: ${_livenessResult.currentStep}'),
+
+Text(
+  'Kedipan mata: '
+  '${_livenessResult.blinkDetected ? "Terdeteksi" : "Belum"}',
+),
+
+Text(
+  'Kepala kiri: '
+  '${_livenessResult.turnedLeft ? "Selesai" : "Belum"}',
+),
+
+Text(
+  'Kepala kanan: '
+  '${_livenessResult.turnedRight ? "Selesai" : "Belum"}',
+),
+
+Text(
+  'Skor liveness: '
+  '${(_livenessResult.score * 100).toStringAsFixed(0)}%',
+  style: const TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.bold,
+  ),
+),
+
+const SizedBox(height: 10),
 
                 const Text(
                   'Data di atas adalah hasil deteksi ML Kit '

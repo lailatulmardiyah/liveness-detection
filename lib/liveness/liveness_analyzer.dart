@@ -5,10 +5,19 @@ import 'blink_detector.dart';
 import 'head_pose_detector.dart';
 import 'temporal_analyzer.dart';
 
+
+enum LivenessAction {
+  blink,
+  turnLeft,
+  turnRight,
+}
+
 class LivenessAnalyzer {
   final BlinkDetector blinkDetector;
   final HeadPoseDetector headPoseDetector;
   final TemporalAnalyzer temporalAnalyzer;
+
+  LivenessAction selectedAction = LivenessAction.blink;
 
   bool _blinkDetected = false;
   bool _turnedLeft = false;
@@ -49,58 +58,74 @@ class LivenessAnalyzer {
     // 3. CEK GERAKAN KEPALA
     // ==========================================
 
-    if (temporalAnalyzer.hasTurnedLeft()) {
-      _turnedLeft = true;
-    }
+    
+if (direction == HeadDirection.left) {
+  _turnedLeft = true;
+}
 
-    if (temporalAnalyzer.hasTurnedRight()) {
-      _turnedRight = true;
-    }
+if (direction == HeadDirection.right) {
+  _turnedRight = true;
+}
+
 
     // ==========================================
     // 4. HITUNG SCORE
     // ==========================================
 
-    int completed = 0;
+    
+final double score = switch (selectedAction) {
+  LivenessAction.blink =>
+    _blinkDetected ? 1.0 : 0.0,
+  LivenessAction.turnLeft =>
+    _turnedLeft ? 1.0 : 0.0,
+  LivenessAction.turnRight =>
+    _turnedRight ? 1.0 : 0.0,
+};
 
-    if (_blinkDetected) {
-      completed++;
-    }
-
-    if (_turnedLeft) {
-      completed++;
-    }
-
-    if (_turnedRight) {
-      completed++;
-    }
-
-    final double score = completed / 3.0;
 
     // ==========================================
     // 5. CEK LIVE
     // ==========================================
 
-    final bool isLive =
-        _blinkDetected &&
-        _turnedLeft &&
-        _turnedRight;
+    
+late final bool isLive;
+
+switch (selectedAction) {
+  case LivenessAction.blink:
+    isLive = _blinkDetected;
+    break;
+
+  case LivenessAction.turnLeft:
+    isLive = _turnedLeft;
+    break;
+
+  case LivenessAction.turnRight:
+    isLive = _turnedRight;
+    break;
+}
+
 
     // ==========================================
     // 6. TENTUKAN STEP
     // ==========================================
 
-    String currentStep;
+   
+String currentStep;
 
-    if (!_blinkDetected) {
-      currentStep = 'BLINK';
-    } else if (!_turnedLeft) {
-      currentStep = 'TURN LEFT';
-    } else if (!_turnedRight) {
-      currentStep = 'TURN RIGHT';
-    } else {
-      currentStep = 'COMPLETED';
-    }
+switch (selectedAction) {
+  case LivenessAction.blink:
+    currentStep = _blinkDetected ? 'COMPLETED' : 'BLINK';
+    break;
+
+  case LivenessAction.turnLeft:
+    currentStep = _turnedLeft ? 'COMPLETED' : 'TURN LEFT';
+    break;
+
+  case LivenessAction.turnRight:
+    currentStep = _turnedRight ? 'COMPLETED' : 'TURN RIGHT';
+    break;
+}
+
 
     return LivenessResult(
       blinkDetected: _blinkDetected,

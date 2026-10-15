@@ -175,6 +175,10 @@ class _CameraPageState extends State<CameraPage> {
   String _modelClassification = '-';
   bool _isModelReady = false;
 
+   // Hasil gabungan liveness dan Random Forest
+  String _finalLivenessStatus = 'MENUNGGU DETEKSI';
+  double _combinedLivenessScore = 0.0;
+
   // File CSV untuk menyimpan data eksperimen.
   File? _csvFile;
 
@@ -450,12 +454,43 @@ final livenessResult = _livenessAnalyzer.processFace(face);
         confidenceVoteFraction = (prediction['confidence_vote_fraction'] as num)
             .toDouble();
       }
+      
+
 
       final laplacianVariance = textureFeatures['laplacian_variance'] ?? 0;
 
       final textureClassification = laplacianVariance >= _laplacianThreshold
           ? 'REAL'
           : 'REPLAY';
+          
+final double textureScore =
+    textureClassification == 'REAL' ? 1.0 : 0.0;
+
+final double randomForestScore =
+    modelClassification == 'REAL' ? 1.0 : 0.0;
+
+final double actionScore = livenessResult.score;
+
+final double combinedLivenessScore =
+    (textureScore + randomForestScore + actionScore) / 3.0;
+
+
+          
+String finalStatus;
+
+if (model == null) {
+  finalStatus = 'MODEL BELUM SIAP';
+} else if (
+    textureClassification == 'REPLAY' ||
+    modelClassification == 'REPLAY'
+) {
+  finalStatus = 'REPLAY TERDETEKSI';
+} else if (!livenessResult.isLive) {
+  finalStatus = 'MENUNGGU AKSI LIVENESS';
+} else {
+  finalStatus = 'KANDIDAT LIVE';
+}
+
 
       // --------------------------------------------------------
       // E. Tambahkan nomor frame
@@ -498,6 +533,10 @@ final livenessResult = _livenessAnalyzer.processFace(face);
           _textureClassification = textureClassification;
 
           _modelClassification = modelClassification;
+
+          _combinedLivenessScore = combinedLivenessScore;
+
+          _finalLivenessStatus = finalStatus;
         });
       }
 
@@ -650,6 +689,57 @@ final livenessResult = _livenessAnalyzer.processFace(face);
           // ------------------------------------------------------
           // INFORMATION PANEL
           // ------------------------------------------------------
+          
+Padding(
+  padding: const EdgeInsets.symmetric(
+    horizontal: 16,
+    vertical: 8,
+  ),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text(
+        'Pilih Aksi Liveness:',
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      const SizedBox(height: 8),
+      DropdownButton<LivenessAction>(
+        isExpanded: true,
+        value: _livenessAnalyzer.selectedAction,
+        items: const [
+          DropdownMenuItem(
+            value: LivenessAction.blink,
+            child: Text('Kedipkan Mata'),
+          ),
+          DropdownMenuItem(
+            value: LivenessAction.turnLeft,
+            child: Text('Toleh Kiri'),
+          ),
+          DropdownMenuItem(
+            value: LivenessAction.turnRight,
+            child: Text('Toleh Kanan'),
+          ),
+        ],
+        onChanged: (action) {
+          if (action == null) return;
+
+          setState(() {
+            _livenessAnalyzer.selectedAction = action;
+            _livenessAnalyzer.reset();
+            _livenessResult = LivenessResult.initial();
+            _combinedLivenessScore = 0.0;
+            _finalLivenessStatus = 'MENUNGGU DETEKSI';
+          });
+        },
+      ),
+    ],
+  ),
+),
+
+
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
@@ -726,18 +816,30 @@ final livenessResult = _livenessAnalyzer.processFace(face);
                   style: const TextStyle(fontSize: 14),
                 ),
 
-                const SizedBox(height: 8),
+               
+const SizedBox(height: 8),
 
-                Text(
-                  'Random Forest: '
-                  '${_isModelReady ? _modelClassification : "Memuat model..."}',
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+Text(
+  'Random Forest: '
+  '${_isModelReady ? _modelClassification : "Memuat model..."}',
+  style: const TextStyle(
+    fontSize: 22,
+    fontWeight: FontWeight.bold,
+  ),
+),
 
-                const SizedBox(height: 10),
+const SizedBox(height: 8),
+
+Text(
+  'HASIL AKHIR: $_finalLivenessStatus',
+  style: const TextStyle(
+    fontSize: 20,
+    fontWeight: FontWeight.bold,
+  ),
+),
+
+const SizedBox(height: 10),
+
 
 const Text(
   'HASIL LIVENESS DETECTION',
@@ -766,14 +868,16 @@ Text(
   '${_livenessResult.turnedRight ? "Selesai" : "Belum"}',
 ),
 
+
 Text(
   'Skor liveness: '
-  '${(_livenessResult.score * 100).toStringAsFixed(0)}%',
+  '${(_combinedLivenessScore * 100).toStringAsFixed(0)}%',
   style: const TextStyle(
     fontSize: 18,
     fontWeight: FontWeight.bold,
   ),
 ),
+
 
 const SizedBox(height: 10),
 

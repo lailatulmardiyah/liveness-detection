@@ -21,13 +21,14 @@ class HeadPoseDetector {
       return HeadDirection.unknown;
     }
 
-    if (angleY < -turnThreshold) {
-      return HeadDirection.left;
-    }
+    
+if (angleY < -turnThreshold) {
+  return HeadDirection.right;
+}
 
-    if (angleY > turnThreshold) {
-      return HeadDirection.right;
-    }
+if (angleY > turnThreshold) {
+  return HeadDirection.left;
+}
 
     return HeadDirection.center;
   }

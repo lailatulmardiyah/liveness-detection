@@ -4,7 +4,7 @@ import '../models/liveness_result.dart';
 import 'blink_detector.dart';
 import 'head_pose_detector.dart';
 import 'temporal_analyzer.dart';
-
+import 'dart:math';
 
 enum LivenessAction {
   blink,
@@ -17,7 +17,9 @@ class LivenessAnalyzer {
   final HeadPoseDetector headPoseDetector;
   final TemporalAnalyzer temporalAnalyzer;
 
-  LivenessAction selectedAction = LivenessAction.blink;
+  LivenessAction selectedAction = LivenessAction.values[
+    Random().nextInt(LivenessAction.values.length)
+  ];
 
   bool _blinkDetected = false;
   bool _turnedLeft = false;

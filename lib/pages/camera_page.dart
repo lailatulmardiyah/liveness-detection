@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:csv/csv.dart';
 import 'package:path_provider/path_provider.dart';
-
+import 'verification_success_page.dart';
 import '../services/liveness_random_forest.dart';
 
 class CameraPage extends StatefulWidget {
@@ -22,6 +22,22 @@ class _CameraPageState extends State<CameraPage> {
     final LivenessAnalyzer _livenessAnalyzer = LivenessAnalyzer();
 
   LivenessResult _livenessResult = LivenessResult.initial();
+
+  bool _successPageOpened = false;
+
+  String get _selectedChallengeLabel {
+    switch (_livenessAnalyzer.selectedAction) {
+      case LivenessAction.blink:
+        return 'Kedipkan mata';
+
+      case LivenessAction.turnLeft:
+        return 'Toleh ke kiri';
+
+      case LivenessAction.turnRight:
+        return 'Toleh ke kanan';
+    }
+  }
+
   Map<String, double> _calculateTextureFeatures(CameraImage image, Face face) {
     final plane = image.planes[0];
 
@@ -427,7 +443,7 @@ class _CameraPageState extends State<CameraPage> {
       // --------------------------------------------------------
 
       final face = faces.first;
-final livenessResult = _livenessAnalyzer.processFace(face);
+      final livenessResult = _livenessAnalyzer.processFace(face);
       final textureFeatures = _calculateTextureFeatures(image, face);
 
       final model = _livenessModel;
@@ -539,6 +555,28 @@ if (model == null) {
           _finalLivenessStatus = finalStatus;
         });
       }
+
+      if (mounted &&
+          livenessResult.isLive &&
+          !_successPageOpened) {
+        _successPageOpened = true;
+
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) =>
+                const VerificationSuccessPage(),
+          ),
+        );
+
+        if (mounted) {
+          setState(() {
+            _successPageOpened = false;
+            _livenessAnalyzer.reset();
+            _livenessResult = LivenessResult.initial();
+          });
+        }
+      }
+
 
       await _saveFrameToCsv(
         sessionId: _sessionId,
@@ -690,56 +728,6 @@ if (model == null) {
           // INFORMATION PANEL
           // ------------------------------------------------------
           
-Padding(
-  padding: const EdgeInsets.symmetric(
-    horizontal: 16,
-    vertical: 8,
-  ),
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      const Text(
-        'Pilih Aksi Liveness:',
-        style: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      const SizedBox(height: 8),
-      DropdownButton<LivenessAction>(
-        isExpanded: true,
-        value: _livenessAnalyzer.selectedAction,
-        items: const [
-          DropdownMenuItem(
-            value: LivenessAction.blink,
-            child: Text('Kedipkan Mata'),
-          ),
-          DropdownMenuItem(
-            value: LivenessAction.turnLeft,
-            child: Text('Toleh Kiri'),
-          ),
-          DropdownMenuItem(
-            value: LivenessAction.turnRight,
-            child: Text('Toleh Kanan'),
-          ),
-        ],
-        onChanged: (action) {
-          if (action == null) return;
-
-          setState(() {
-            _livenessAnalyzer.selectedAction = action;
-            _livenessAnalyzer.reset();
-            _livenessResult = LivenessResult.initial();
-            _combinedLivenessScore = 0.0;
-            _finalLivenessStatus = 'MENUNGGU DETEKSI';
-          });
-        },
-      ),
-    ],
-  ),
-),
-
-
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
@@ -851,22 +839,23 @@ const Text(
 
 const SizedBox(height: 8),
 
-Text('Langkah: ${_livenessResult.currentStep}'),
 
 Text(
-  'Kedipan mata: '
-  '${_livenessResult.blinkDetected ? "Terdeteksi" : "Belum"}',
+  'Challenge: $_selectedChallengeLabel',
+  style: const TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.bold,
+  ),
 ),
 
-Text(
-  'Kepala kiri: '
-  '${_livenessResult.turnedLeft ? "Selesai" : "Belum"}',
-),
+const SizedBox(height: 4),
 
 Text(
-  'Kepala kanan: '
-  '${_livenessResult.turnedRight ? "Selesai" : "Belum"}',
+  'Status: '
+  '${_livenessResult.isLive ? "Berhasil" : "Belum selesai"}',
+  style: const TextStyle(fontSize: 16),
 ),
+
 
 
 Text(

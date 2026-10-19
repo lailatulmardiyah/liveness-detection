@@ -492,20 +492,43 @@ final double combinedLivenessScore =
 
 
           
+
+final bool livenessPassed =
+    livenessResult.isLive &&
+    livenessResult.score >= 1.0;
+
+final bool randomForestPassed =
+    model != null &&
+    modelClassification == 'REAL';
+
+final bool texturePassed =
+    textureClassification == 'REAL';
+
+final bool thresholdPassed =
+    laplacianVariance >= _laplacianThreshold;
+
+final bool allChecksPassed =
+    livenessPassed &&
+    randomForestPassed &&
+    texturePassed &&
+    thresholdPassed;
+
 String finalStatus;
 
 if (model == null) {
   finalStatus = 'MODEL BELUM SIAP';
-} else if (
-    textureClassification == 'REPLAY' ||
-    modelClassification == 'REPLAY'
-) {
+} else if (!texturePassed || !randomForestPassed) {
   finalStatus = 'REPLAY TERDETEKSI';
-} else if (!livenessResult.isLive) {
+} else if (!livenessPassed) {
   finalStatus = 'MENUNGGU AKSI LIVENESS';
-} else {
+} else if (!thresholdPassed) {
+  finalStatus = 'THRESHOLD TIDAK TERPENUHI';
+} else if (allChecksPassed) {
   finalStatus = 'KANDIDAT LIVE';
+} else {
+  finalStatus = 'VERIFIKASI GAGAL';
 }
+
 
 
       // --------------------------------------------------------
@@ -557,8 +580,8 @@ if (model == null) {
       }
 
       if (mounted &&
-          livenessResult.isLive &&
-          !_successPageOpened) {
+    allChecksPassed &&
+    !_successPageOpened) {
         _successPageOpened = true;
 
         await Navigator.of(context).push(

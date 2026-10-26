@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import '../pages/camera_page.dart';
+
+
 import 'liveness_status_card.dart';
 import 'liveness_result_card.dart';
-import '../pages/camera_page.dart';
 
 class LivenessDetectionPage extends StatefulWidget {
   const LivenessDetectionPage({super.key});
@@ -13,167 +15,385 @@ class LivenessDetectionPage extends StatefulWidget {
 
 class _LivenessDetectionPageState
     extends State<LivenessDetectionPage> {
-  String status = 'Siap memulai';
-  bool isStarted = false;
-  bool showResult = false;
+  // Nilai awal untuk prototipe UI.
+  // Nantinya diganti dengan hasil deteksi kamera dan algoritma.
+  bool faceDetected = false;
+  bool blinkDetected = false;
+  bool headMovementDetected = false;
+  bool mouthMovementDetected = false;
 
-  
-Future<void> startDetection() async {
-  setState(() {
-    isStarted = true;
-    showResult = false;
-    status = 'Membuka kamera...';
-  });
+  double livenessScore = 0;
+  bool? isLive;
 
-  try {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const CameraPage(),
+  void _refreshStatus() {
+    // Belum menjalankan deteksi sungguhan.
+    // Tombol ini hanya mengembalikan UI ke status awal.
+    setState(() {
+      faceDetected = false;
+      blinkDetected = false;
+      headMovementDetected = false;
+      mouthMovementDetected = false;
+      livenessScore = 0;
+      isLive = null;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Status tampilan diperbarui. '
+          'Deteksi kamera belum dihubungkan.',
+        ),
       ),
     );
-  } finally {
-    if (!mounted) return;
-
-    setState(() {
-      isStarted = false;
-      status = 'Siap memulai';
-    });
-  }
-}
-
-
-  void resetDetection() {
-    setState(() {
-      isStarted = false;
-      showResult = false;
-      status = 'Siap memulai';
-    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7FB),
+      backgroundColor: const Color(0xFFF3F6FD),
       appBar: AppBar(
+        backgroundColor: const Color(0xFF23477F),
+        foregroundColor: Colors.white,
+        centerTitle: true,
+        automaticallyImplyLeading: false,
         title: const Text(
           'Face Liveness Detection',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: 19,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF17365D),
-        elevation: 0,
+        actions: [
+          IconButton(
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Pengaturan belum tersedia.'),
+                ),
+              );
+            },
+            icon: const Icon(Icons.settings_outlined),
+          ),
+        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Verifikasi Wajah',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF17365D),
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Pastikan wajah terlihat jelas dan berada '
-                'di tengah area kamera.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.black54,
-                ),
-              ),
-              const SizedBox(height: 24),
+              _buildCameraArea(),
+              const SizedBox(height: 18),
 
-              // Placeholder UI, belum terhubung ke kamera.
-              Container(
-                height: 300,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF172B4D),
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 190,
-                      height: 220,
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: const Color(0xFF60D6FF),
-                          width: 3,
-                        ),
-                        borderRadius: BorderRadius.circular(100),
-                      ),
-                      child: const Icon(
-                        Icons.face_retouching_natural,
-                        color: Colors.white,
-                        size: 100,
-                      ),
+              LivenessStatusCard(
+                title: 'Status Wajah',
+                description: faceDetected
+                    ? 'Wajah terdeteksi'
+                    : 'Wajah belum terdeteksi',
+                detected: faceDetected,
+              ),
+              const SizedBox(height: 18),
+
+              _buildChecksCard(),
+              const SizedBox(height: 18),
+
+              LivenessResultCard(
+                score: livenessScore,
+                isLive: isLive,
+              ),
+              const SizedBox(height: 18),
+
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: ElevatedButton.icon(
+                  onPressed: _refreshStatus,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text(
+                    'Perbarui Status',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
                     ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Area kamera',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              LivenessStatusCard(status: status),
-
-              const SizedBox(height: 20),
-
-              if (showResult) ...[
-                const LivenessResultCard(
-                  score: 0,
-                  isLive: false,
-                ),
-                const SizedBox(height: 20),
-              ],
-
-              ElevatedButton.icon(
-                onPressed: isStarted ? null : startDetection,
-                icon: const Icon(Icons.camera_alt),
-                label: const Text('Mulai Deteksi'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1769AA),
-                  foregroundColor: Colors.white,
-                  disabledBackgroundColor: Colors.grey,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  textStyle: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF23477F),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
                 ),
               ),
+              const SizedBox(height: 14),
 
-              if (isStarted) ...[
-                const SizedBox(height: 12),
-                OutlinedButton(
-                  onPressed: resetDetection,
-                  child: const Text('Kembali'),
+              const Center(
+                child: Text(
+                  'Pastikan wajah terlihat jelas di depan '
+                  'kamera untuk hasil yang akurat.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Color(0xFF647392),
+                    fontSize: 12,
+                  ),
                 ),
-              ],
+              ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  
+Widget _buildCameraArea() {
+  return InkWell(
+    borderRadius: BorderRadius.circular(22),
+    onTap: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const CameraPage(),
+        ),
+      );
+    },
+    child: Container(
+      height: 250,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: const Color(0xFF777980),
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Stack(
+        children: [
+          const Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.camera_alt_outlined,
+                  color: Colors.white,
+                  size: 65,
+                ),
+                SizedBox(height: 10),
+                Text(
+                  'Tekan untuk membuka kamera',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Label LIVE
+          Positioned(
+            top: 14,
+            left: 14,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 7,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.circle,
+                    color: Colors.red,
+                    size: 10,
+                  ),
+                  SizedBox(width: 7),
+                  Text(
+                    'LIVE',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Bingkai wajah
+          
+ // Bingkai wajah yang lebih besar
+Center(
+  child: Container(
+    width: 220,
+    height: 200,
+    decoration: BoxDecoration(
+      border: Border.all(
+        color: Colors.white,
+        width: 3,
+      ),
+      borderRadius: BorderRadius.circular(30),
+    ),
+  ),
+),
+
+
+          // Informasi status wajah
+          Positioned(
+            bottom: 14,
+            left: 12,
+            right: 12,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 9,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                child: Text(
+                  faceDetected
+                      ? 'Wajah berhasil terdeteksi'
+                      : 'Tekan untuk membuka kamera',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+
+  Widget _buildChecksCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEDF3FF),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color(0xFFD9E5FF),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Pemeriksaan Liveness',
+            style: TextStyle(
+              color: Color(0xFF23477F),
+              fontWeight: FontWeight.bold,
+              fontSize: 17,
+            ),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _checkItem(
+                  icon: Icons.remove_red_eye_outlined,
+                  title: 'Kedipan Mata',
+                  detected: blinkDetected,
+                  color: const Color(0xFFD6E5FF),
+                  iconColor: const Color(0xFF2366CF),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _checkItem(
+                  icon: Icons.face_outlined,
+                  title: 'Gerakan Kepala',
+                  detected: headMovementDetected,
+                  color: const Color(0xFFE5D9FF),
+                  iconColor: const Color(0xFF6542C0),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _checkItem(
+                  icon: Icons.mood_outlined,
+                  title: 'Gerakan Mulut',
+                  detected: mouthMovementDetected,
+                  color: const Color(0xFFFFDCE8),
+                  iconColor: const Color(0xFFD82F70),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _checkItem({
+    required IconData icon,
+    required String title,
+    required bool detected,
+    required Color color,
+    required Color iconColor,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 46,
+          height: 46,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: iconColor, size: 25),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          title,
+          style: const TextStyle(
+            color: Color(0xFF23477F),
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 7),
+        Text(
+          detected ? 'Selesai' : '-',
+          style: const TextStyle(
+            color: Color(0xFF647392),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 7),
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 8,
+            vertical: 5,
+          ),
+          decoration: BoxDecoration(
+            color: detected
+                ? const Color(0xFFDDF7E5)
+                : const Color(0xFFE1E6EF),
+            borderRadius: BorderRadius.circular(15),
+          ),
+          child: Text(
+            detected ? 'Selesai' : 'Menunggu',
+            style: TextStyle(
+              fontSize: 10,
+              color: detected
+                  ? Colors.green.shade800
+                  : const Color(0xFF647392),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

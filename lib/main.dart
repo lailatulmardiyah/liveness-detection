@@ -1,25 +1,28 @@
+
 import 'package:flutter/material.dart';
-import 'pages/camera_page.dart';
+import 'liveness-detection/liveness_detection_page.dart';
 
 void main() {
-  runApp(const MyApp());
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const LivenessDetectionApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class LivenessDetectionApp extends StatelessWidget {
+  const LivenessDetectionApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Liveness Detection',
+      title: 'Face Liveness Detection',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.deepPurple,
-        ),
         useMaterial3: true,
+        scaffoldBackgroundColor: const Color(0xFFF3F6FD),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF23477F),
+        ),
       ),
-      home: const CameraPage(),
+    home: const LivenessDetectionPage(),
     );
   }
 }

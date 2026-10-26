@@ -1,12 +1,19 @@
 
 import 'package:flutter/material.dart';
 
+const Color livenessNavy = Color(0xFF23477F);
+const Color livenessMuted = Color(0xFF647392);
+
 class LivenessStatusCard extends StatelessWidget {
-  final String status;
+  final String title;
+  final String description;
+  final bool detected;
 
   const LivenessStatusCard({
     super.key,
-    required this.status,
+    required this.title,
+    required this.description,
+    required this.detected,
   });
 
   @override
@@ -15,31 +22,68 @@ class LivenessStatusCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE0E7EF)),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         children: [
-          const Icon(
-            Icons.info_outline,
-            color: Color(0xFF1769AA),
-            size: 28,
+          Container(
+            width: 58,
+            height: 58,
+            decoration: const BoxDecoration(
+              color: Color(0xFFDCE5FF),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.face_retouching_natural,
+              color: livenessNavy,
+              size: 32,
+            ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Status Deteksi',
-                  style: TextStyle(
+                Text(
+                  title,
+                  style: const TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: 15,
+                    color: livenessNavy,
+                    fontSize: 17,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(status),
+                const SizedBox(height: 5),
+                Text(
+                  description,
+                  style: const TextStyle(
+                    color: livenessMuted,
+                    fontSize: 13,
+                  ),
+                ),
               ],
+            ),
+          ),
+          const SizedBox(width: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 10,
+              vertical: 8,
+            ),
+            decoration: BoxDecoration(
+              color: detected
+                  ? const Color(0xFFDDF7E5)
+                  : const Color(0xFFFFEDD5),
+              borderRadius: BorderRadius.circular(22),
+            ),
+            child: Text(
+              detected ? 'TERDETEKSI' : 'MENUNGGU',
+              style: TextStyle(
+                color: detected
+                    ? Colors.green.shade800
+                    : const Color(0xFFDA7900),
+                fontWeight: FontWeight.bold,
+                fontSize: 10,
+              ),
             ),
           ),
         ],

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../pages/camera_page.dart';
+import 'liveness_camera_view.dart';
 
 
 import 'liveness_status_card.dart';
@@ -147,129 +147,8 @@ class _LivenessDetectionPageState
 
   
 Widget _buildCameraArea() {
-  return InkWell(
-    borderRadius: BorderRadius.circular(22),
-    onTap: () {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const CameraPage(),
-        ),
-      );
-    },
-    child: Container(
-      height: 250,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: const Color(0xFF777980),
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: Stack(
-        children: [
-          const Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.camera_alt_outlined,
-                  color: Colors.white,
-                  size: 65,
-                ),
-                SizedBox(height: 10),
-                Text(
-                  'Tekan untuk membuka kamera',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          ),
+  return const LivenessCameraView();
 
-          // Label LIVE
-          Positioned(
-            top: 14,
-            left: 14,
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 7,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(22),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.circle,
-                    color: Colors.red,
-                    size: 10,
-                  ),
-                  SizedBox(width: 7),
-                  Text(
-                    'LIVE',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Bingkai wajah
-          
- // Bingkai wajah yang lebih besar
-Center(
-  child: Container(
-    width: 220,
-    height: 200,
-    decoration: BoxDecoration(
-      border: Border.all(
-        color: Colors.white,
-        width: 3,
-      ),
-      borderRadius: BorderRadius.circular(30),
-    ),
-  ),
-),
-
-
-          // Informasi status wajah
-          Positioned(
-            bottom: 14,
-            left: 12,
-            right: 12,
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 9,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.circular(22),
-                ),
-                child: Text(
-                  faceDetected
-                      ? 'Wajah berhasil terdeteksi'
-                      : 'Tekan untuk membuka kamera',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
 }
 
 

@@ -12,7 +12,13 @@ import 'verification_success_page.dart';
 import '../services/liveness_random_forest.dart';
 
 class CameraPage extends StatefulWidget {
-  const CameraPage({super.key});
+  final bool embedded;
+
+const CameraPage({
+    super.key,
+    this.embedded = false,
+  });
+
 
   @override
   State<CameraPage> createState() => _CameraPageState();
@@ -733,8 +739,25 @@ if (model == null) {
     if (!_isCameraInitialized ||
         controller == null ||
         !controller.value.isInitialized) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          if (widget.embedded) {
+    return const Center(
+      child: CircularProgressIndicator(),
+    );
+  }
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator()
+          )
+          );
     }
+    // Jika kamera ditampilkan di halaman utama,
+// tampilkan preview saja tanpa Scaffold dan AppBar tambahan.
+if (widget.embedded) {
+  return ClipRRect(
+    borderRadius: BorderRadius.circular(22),
+    child: CameraPreview(controller),
+  );
+}
 
     return Scaffold(
       appBar: AppBar(title: const Text('Eksperimen Face Detection')),
